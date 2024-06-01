@@ -1,0 +1,94 @@
+Contoh kasus sebagai berikut:
+
+[Pesan 1]
+Halo, selamat datang di Toko.
+Silakan pilih menu berikut dan balas pesan ini sesuai nomor yang diberikan:
+
+1.Daftar produk
+2.Alamat
+
+[Pesan 2]
+User membalas: 1
+
+[Pesan 3]
+Berikut ini daftar produk milik kami:
+
+1.Tart
+2.Pie
+3.Kembali
+
+[Pesan 4]
+User membalas 1
+
+[Pesan 5]
+Tart kami sangat spesial.
+Harganya hanya Rp. 10.000
+
+1.Pesan sekarang
+2.Kembali
+
+[Pesan 6]
+User membalas: 2
+
+[Pesan 7]
+Berikut ini daftar produk milik kami:
+1.Tar
+2.Pie
+3.Kembali
+
+[Pesan 8]
+User membalas: 2
+
+[Pesan 9]
+Pie kami sangat enak.
+Harganya hanya Rp. 20.000
+
+1.Pesan sekarang
+2.Kembali
+
+[Pesan 10]
+[Foto pie]
+
+[Pesan 11]
+User membalas: 1
+
+[Pesan 12]
+Baik. Silakan masukan nama kamu:
+
+1.Kembali
+
+[Pesan 13]
+User membalas: Budi
+
+[Pesan 14]
+Hai Budi. Silakan masukan alamat lengkap kamu:
+1.Kembali
+
+[Pesan 15]
+User membalas: 1
+
+[Pesan 16]
+Baik. Silakan masukan nama kamu:
+
+1.Kembali
+
+[Pesan 17]
+User membalas: Ardi
+
+[Pesan 18]
+Hai Ardi. Silakan masukan alamat lengkap kamu:
+1.Kembali
+
+[Pesan 15]
+User membalas: Jalan cuwiri No. 188, Yogyakarta
+
+[Pesan 16]
+Terima kasih, pesanan Anda berhasil kami catat.
+Nama: Ardi
+Alamat: Jalan cuwiri No. 188, Yogyakarta
+
+Mohon kesediannya untuk menunggu pesanan diproses.
+
+Ada lagi yang bisa kami bantu:
+1.Ke menu
+2.Cukup
