@@ -1,6 +1,9 @@
 const { Sequelize, DataTypes } = require('sequelize');
 const sequelize = new Sequelize('sqlite:./chatbot.db');
 
+// sequlize disable logging
+sequelize.options.logging = false;
+
 const Setting = sequelize.define('Setting', {
     key: {
         type: DataTypes.STRING,
@@ -39,6 +42,10 @@ const Block = sequelize.define('Block', {
         allowNull: false,
         defaultValue: false
     },
+    matchRules: {
+        type: DataTypes.JSON,
+        allowNull: true
+    }
 });
 
 const BlockImage = sequelize.define('BlockImage', {

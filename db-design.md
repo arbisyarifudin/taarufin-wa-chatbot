@@ -14,6 +14,7 @@
 - next_id NULLABLE PK
 - is_start_point BOOLEAN
 - input
+- match_rules JSON
 
 ### block_images
 - id PK

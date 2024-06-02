@@ -1,8 +1,20 @@
 const settings = [
   {
     key: 'businessName',
-    value: 'Taarufin.id'
-  }
+    value: 'Taarufin'
+  },
+  {
+    key: 'businessBotName',
+    value: 'Lidia'
+  },
+  {
+    key: 'businessInstagramID',
+    value: '@taarufin.offical'
+  },
+  {
+    key: 'businessInstagramUrl',
+    value: 'https://www.instagram.com/taarufin.official/'
+  },
 ]
 
 const users = [
@@ -30,14 +42,31 @@ const blocks = [
   {
     id: 1,
     type: 'buttons',
-    text: 'Halo, selamat datang di *{businessName}*. Silakan pilih menu berikut dan balas pesan ini sesuai nomor yang diberikan:',
+    text: `Wa 'alaikumussalam warahmatullahi wabarakatuh.
+
+    Perkenalkan, saya adalah {businessName} Bot bernama {businessBotName}.
+    
+    Saya akan membantu proses pendaftaran Taaruf anda sambil menunggu Admin merespon pesan secara langsung.
+    
+    Senang bisa membantu kamu 😊 
+    Semoga ini menjadi langkah awal bertemu jodoh yg baik ya...
+    
+    *Syarat mengikuti program ini:*
+    ° Islam
+    ° Dewasa
+    ° Siap nikah *(Max 1 thn dr skrg)*
+    ° Sholat 5 waktu & menutup aurat
+    
+    Jika memenuhi kriteria di atas silahkan bergabung di {businessInstagramID}
+
+
+    
+    Ketik *NEXT* u/ melanjutkan
+    
+    `,
     options: [
       {
-        text: 'Daftar produk',
-        next: 3
-      },
-      {
-        text: 'Alamat',
+        text: 'NEXT',
         next: 2
       }
     ],
@@ -46,98 +75,259 @@ const blocks = [
   {
     id: 2,
     type: 'buttons',
-    text: 'Alamat kami di Jalan Raya No. 1, Jakarta',
+    text: `Dijawab Oleh {businessBotName}
+
+    *WAJIB DIPAHAMI*
+    *WAJIB DIPAHAMI*
+    *WAJIB DIPAHAMI*
+    
+    
+    1. Data peserta dipost di {businessInstagramID}.
+    
+    2. Peserta boleh mengajukan atau bisa juga menerima pengajuan. Jika ada yg mengajukan taaruf, minta beliau mengisi formulir kosong (seperti yg akan dikirim pada pesan berikutnya).
+    
+    3. Silahkan berkomunikasi dg sopan & tidak melampaui batas.
+    
+    4. Bicarakan HANYA yg dirasa perlu u/ dicocokkan (aqidah, visi pernikahan, pendidikan, org tua, penyakit, dll).
+    
+    5. Sampaikn secara jujur, tidak melebih2kan dan tdk menutup-nutupi.
+    
+    6. Jika CV dirasa cocok, silahkan berkunjung (ihwan), atau meminta dikunjungi (ahwat) bertemu dg wali. Proses taaruf dilangsungkan di sini (di rumah akhwat). Di hadapan wali atau ustadz yg menjadi mediator. 
+    
+    7. Setelah melihat wajah (dihadapan wali), 
+    COCOK = LANJUT, TIDAK = IKHTIAR LAGI.
+    
+    8. Khitbah - Nikah
+    
+    *Luruskan niat, JANGAN MAKSIAT, Allah melihat apa yg kita perbuat*
+    
+    NB: 
+    ° Jodoh Allah yg tentukan kita hanya berikhtiar.
+    ° Mungkin saja kita berikhtiar di sini, tetapi ternyata jodoh kita adalah teman kecil/tetangga kita.
+    
+    Ttd
+    Tim {businessInstagramID}
+    
+    
+    
+    Ketik *SETUJU* untuk melanjutkan.
+    
+    `,
     options: [
       {
-        text: 'Kembali',
-        next: 1
+        text: 'SETUJU',
+        next: 3
       }
     ]
   },
   {
     id: 3,
-    type: 'buttons',
-    text: 'Berikut ini daftar produk milik kami:',
-    options: [
+    type: 'question',
+    text: `Dijawab oleh {businessBotName}
+
+    Dibawah ini akan ada beberapa pertanyaan yang akan saya ajukan.
+    Mohon isi dengan benar dan jangan sampai mengisi data yg salah. Khususnya Email.
+
+    * * *
+
+    Baik kita mulai..
+     
+    Boleh saya tahu nama lengkap kamu?`,
+    input: 'name',
+    next: 4,
+    matchRules: [
       {
-        text: 'Tart',
-        next: 5
-      },
+        type: 'greaterThan',
+        value: 3
+      }
+    ]
+  },
+  {
+    id: 4,
+    type: 'question',
+    text: `Halo {name}, salam kenal. 
+    
+    Apa alamat email aktif milik kamu?`,
+    input: 'email',
+    next: 5,
+    matchRules: [
       {
-        text: 'Pie',
-        next: 7
-      },
-      {
-        text: 'Kembali',
-        next: 1
+        type: 'validEmail'
       }
     ]
   },
   {
     id: 5,
-    type: 'buttons',
-    text: 'Tart kami sangat spesial. Harganya hanya Rp. 10.000',
-    image: 'https://placehold.it/300x300?text=Tart',
-    options: [
+    type: 'question',
+    text: 'Berapa tanggal lahir kamu? (contoh: 25-01-1990)',
+    input: 'dob',
+    next: 6,
+    matchRules: [
       {
-        text: 'Pesan sekarang',
-        next: 12
-      },
+        type: 'validDate',
+        pattern: 'DD-MM-YYYY'
+      }
+    ]
+  },
+  {
+    id: 6,
+    type: 'question',
+    text: 'Jenis kelamin kamu? (Laki-laki/Perempuan)',
+    input: 'gender',
+    next: 7,
+    matchRules: [
       {
-        text: 'Kembali',
-        next: 3
+        type: 'inArray',
+        in: ['Laki-laki', 'Perempuan']
       }
     ]
   },
   {
     id: 7,
+    type: 'question',
+    text: `Dijawab oleh {businessBotName}
+
+    Silahkan *dicopy, diisi dan dikirim kembali ke sini.*
+    
+    Isi dgn benar, kami proses berdasar data yang dikirim. Jangan sampai mengisi data yg salah.
+    Khususnya *Email*.
+
+    *Media komunikasi HANYA Email. Tidak dengan WA, IG atau yg lainnya.*
+
+    *Revisi hanya bisa dilakukan setelah 1 minggu.*
+
+    *Data tersebut akan dipost di IG {businessInstagramID}*
+
+
+
+
+
+    SALIN DAN ISI FORMULIR DIBAWAH INI
+    * * *
+
+    Nama: {name}
+    Kota:
+    Jns kelamin: {gender}
+    Usia: {age} thn
+    Status:
+    Pekerjaan:
+    Pendidikan: 
+    Sholat 5 waktu: iya/jarang
+    Kriteria calon: 
+    Target nikah: (max 1 thn)
+    Ciri fisik saya:
+    Jika bersungguh-sungguh hubungi saya melalui, 
+    EMAIL: {email} (wajib diisi) 
+    .
+    .
+    Tambahan:
+    
+
+
+    `,
+    input: 'form',
+    next: 8,
+  },
+  {
+    id: 8,
     type: 'buttons',
-    text: 'Pie kami sangat enak. Harganya hanya Rp. 20.000',
-    image: 'https://placehold.it/300x300?text=Pie',
+    text: `Dijawab oleh {businessBotName}
+
+    Syukron sudah mengisi formulir. 😊
+    Apakah kamu serius mau menikah..?`,
     options: [
       {
-        text: 'Pesan sekarang',
+        text: 'SERIUS',
+        next: 9
+      },
+      {
+        text: 'RAGU-RAGU',
         next: 12
       },
       {
-        text: 'Kembali',
-        next: 3
+        text: 'TIDAK SERIUS',
+        next: 12
       }
     ]
+  },
+  {
+    id: 9,
+    type: 'buttons',
+    text: `Dijawab oleh {businessBotName}
+
+    Baik, kalau ada yg cocok dan sesuai kriteria,
+    apakah dalam waktu (Maximal 1 tahun dr sekarang) Anda siap nikah?`,
+    options: [
+      {
+        text: 'SIAP',
+        next: 10
+      },
+      {
+        text: 'TIDAK SIAP',
+        next: 11
+      }
+    ]
+  },
+  {
+    id: 10,
+    type: 'message',
+    text: `Dijawab oleh {businessBotName}
+
+    Alhamdulillah, semoga Allah memudahkan ikhtiar menjemput jodoh ya.. 😊
+    
+    Baik, sebagai komitmen keseriusan, peserta dipersilahkan memberikan infaq terbaiknya (untuk kelangsungan program ini).
+    
+    Setelah menyelesaikan infaq data akan dipost di instagram {businessInstagramID}
+    
+    BANK SYARIAH INDONESIA: (451) 7174170597
+    Atas Nama: Siti Maulida
+    
+    atau
+    
+    BANK BCA: (014) 8610731130
+    Atas Nama: Siti Maulida
+    
+    Semoga segera bertemu jodohnya ya.
+    
+    Harap konfirmasi dengan mengirim struk jika sudah menyelesaikan infaq.
+    
+    
+    Jika WA Admin tidak merespon dlm 24 jam setelah struk bukti transfer dikirim, silahkan konfirmasi ulang disini. 
+    
+    
+    
+    
+    
+    Official Instagram: {businessInstagramUrl}`,
+    next: null
+  },
+  {
+    id: 11,
+    type: 'message',
+    text: `Dijawab oleh {businessBotName}
+
+    Baik, terima kasih atas kejujuran kamu.
+    Sayang sekali, dikarenakan belum siap menikah dalam waktu dekat, kami tidak bisa melanjutkan proses taaruf ini.
+    
+    Semoga Allah memudahkan ikhtiar menjemput jodoh ya.. 😊
+    Terima kasih atas partisipasinya.
+    
+    Official Instagram: {businessInstagramUrl}`,
+    next: null
   },
   {
     id: 12,
-    type: 'question',
-    text: 'Baik. Silakan masukan nama kamu:',
-    next: 14,
-    input: 'name'
-  },
-  {
-    id: 14,
-    type: 'question',
-    text: 'Hai {name}. Silakan masukan alamat lengkap kamu:',
-    next: 16,
-    input: 'address'
-  },
-  {
-    id: 16,
-    type: 'buttons',
-    text: 'Terima kasih, pesanan Anda berhasil kami catat.\nNama: {name}\nAlamat: {address}\nMohon kesediannya untuk menunggu pesanan diproses.',
-    options: [
-      {
-        text: 'Ke menu',
-        next: 1
-      },
-      {
-        text: 'Cukup',
-        next: 17
-      }
-    ]
-  },
-  {
-    id: 17,
     type: 'message',
-    text: 'Terima kasih. Jangan ragu untuk menghubungi kami kembali.'
+    text: `Dijawab oleh {businessBotName}
+
+    Baik, terima kasih atas kejujuran kamu.
+    Sayang sekali, dikarenakan kamu ragu-ragu atau tidak serius menikah, kami tidak bisa melanjutkan proses taaruf ini.
+
+    Semoga Allah memudahkan ikhtiar menjemput jodoh ya.. 😊
+    Terima kasih atas partisipasinya.
+
+    Official Instagram: {businessInstagramUrl}`,
+    next: null
   }
 ]
 

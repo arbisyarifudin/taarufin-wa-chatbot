@@ -43,6 +43,10 @@ client.on('ready', () => {
 
 client.on('message', async (message) => {
     // console.log('Message received:', message);
+    if (!message.from.includes('@c.us') || !message.body || message.body.trim().length === 0 || message.from.includes('status@broadcast') || message.hasMedia) {
+        return;
+    }
+    
     const chatId = message.from;
     let user = await User.findOne({ where: { waChatId: chatId } });
 
@@ -61,42 +65,53 @@ const handleUserMessage = async (message, user) => {
     const currentBlock = user.lastBlockId ? await Block.findByPk(user.lastBlockId) : null;
     const userInput = message.body.trim().toLowerCase();
 
-    // check if last block at is more than 1 hours
-    const isMoreThanHour = currentBlock && user.lastBlockAt && (new Date() - user.lastBlockAt) > 3600000;
+    // check if last block at is more than 48 hours
+    const isBackToReset = (currentBlock && user.lastBlockAt && (new Date() - user.lastBlockAt) > 48 * 60 * 60 * 1000) || !user.lastBlockId; 
 
-    if (!currentBlock || isMoreThanHour) {
+    // if (!currentBlock || isBackToReset) {
+    if (isBackToReset) {
         const startBlock = await Block.findOne({ where: { isStartPoint: true } });
         if (!startBlock) {
             return;
         }
         user.lastBlockId = startBlock.id;
+        user.lastBlockAt = new Date();
         await user.save();
         await sendBlockMessage(message, startBlock, user);
         return;
     }
 
+    if (!currentBlock) {
+        return;
+    }
+
     if (currentBlock.type === 'buttons') {
+        const options = await BlockOption.findAll({ where: { blockId: currentBlock.id } });
+
         let option;
         const optionIndex = parseInt(userInput) - 1;
         if (!isNaN(optionIndex)) {
-            const options = await BlockOption.findAll({ where: { blockId: currentBlock.id } });
             if (options[optionIndex]) {
                 option = options[optionIndex];
             }
         }
 
         if (!option) {
-            const options = await BlockOption.findAll({ where: { blockId: currentBlock.id } });
             option = options.find(opt => opt.text.toLowerCase().includes(userInput));
         }
 
         if (option) {
             const nextBlock = await Block.findByPk(option.nextId);
             user.lastBlockId = nextBlock.id;
+            user.lastBlockAt = new Date();
             await user.save();
             await sendBlockMessage(message, nextBlock, user);
         } else {
-            await message.reply('Silakan pilih opsi yang valid.');
+            if (options.length > 1) {
+                await message.reply('Balasan tidak valid. Silakan pilih dari opsi yang tersedia.');
+            } else {
+                await message.reply('Balasan tidak valid.');
+            }
         }
     } else if (currentBlock.type === 'question') {
         const inputKey = currentBlock.input;
@@ -113,6 +128,7 @@ const handleUserMessage = async (message, user) => {
 
         const nextBlock = await Block.findByPk(currentBlock.nextId);
         user.lastBlockId = nextBlock.id;
+        user.lastBlockAt = new Date();
         await user.save();
         await sendBlockMessage(message, nextBlock, user);
     } else if (currentBlock.type === 'message') {
@@ -120,17 +136,56 @@ const handleUserMessage = async (message, user) => {
         if (currentBlock.nextId) {
             const nextBlock = await Block.findByPk(currentBlock.nextId);
             user.lastBlockId = nextBlock.id;
+            user.lastBlockAt = new Date();
             await user.save();
             await sendBlockMessage(message, nextBlock, user);
         } else {
             user.lastBlockId = null;
+            user.lastBlockAt = null;
             await user.save();
-            await handleUserMessage(message, user);
+            // await handleUserMessage(message, user);
         }
     }
 };
 
 const sendBlockMessage = async (message, block, user) => {
+
+    // validate request
+    if (!block || !message || !user) {
+        return;
+    }
+
+    // validate message
+    const matchRules = block.matchRules;
+    if (matchRules && matchRules.length > 0) {
+        for (const rule of matchRules) {
+            if (rule.type === 'greaterThan') {
+                if (message.body.trim().length <= rule.value) {
+                    await message.reply(`Silakan masukkan minimal ${rule.value} karakter.`);
+                    return;
+                }
+            } else if (rule.type === 'validEmail') {
+                if (!message.body.trim().includes('@')) {
+                    await message.reply('Silakan masukkan alamat email yang valid.');
+                    return;
+                }
+            } else if (rule.type === 'validDate') {
+                const pattern = rule.pattern || 'DD-MM-YYYY';
+                const moment = require('moment');
+                if (!moment(message.body.trim(), pattern).isValid()) {
+                    await message.reply(`Silakan masukkan tanggal yang valid dengan format ${pattern}.`);
+                    return;
+                }
+            } else if (rule.type === 'inArray') {
+                if (!rule.in.includes(message.body.trim())) {
+                    await message.reply(`Balasan tidak valid. Silakan pilih dari opsi yang tersedia.`);
+                    return;
+                }
+            }
+        }
+    }
+
+
     let replyMessage = block.text;
 
     const settings = await Setting.findAll();
@@ -147,7 +202,11 @@ const sendBlockMessage = async (message, block, user) => {
         const options = await BlockOption.findAll({ where: { blockId: block.id } });
         replyMessage += '\n\n';
         options.forEach((option, index) => {
-            replyMessage += `${index + 1}. ${option.text}\n`;
+            if (option.length > 1) {
+                replyMessage += `${index + 1}. ${option.text}\n`;
+            } else {
+                replyMessage += `${option.text}\n`;
+            }
         });
     }
 
@@ -166,6 +225,12 @@ const sendBlockMessage = async (message, block, user) => {
     }
 
     await message.reply(replyMessage);
+
+    // if (!block.nextId) {
+    //     user.lastBlockId = null;
+    //     user.lastBlockAt = null;
+    //     await user.save();
+    // }
 };
 
 client.initialize();
