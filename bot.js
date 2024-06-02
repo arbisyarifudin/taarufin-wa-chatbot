@@ -1,12 +1,12 @@
 const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
-const util = require('util')
-const urlExists = require('url-exists')
-const isUrlExists = util.promisify(urlExists)
+const util = require('util');
+const urlExists = require('url-exists');
+const isUrlExists = util.promisify(urlExists);
 
-const { blocks, settings } = require('./datas.js');
+const { sequelize, Setting, Block, BlockOption, User, UserData, BlockImage } = require('./models');
 
-const wwebVersion = '2.2407.3'
+const wwebVersion = '2.2407.3';
 const client = new Client({
     authStrategy: new LocalAuth({
         clientId: 'session-123',
@@ -14,7 +14,6 @@ const client = new Client({
     qrMaxRetries: 10,
     restartOnAuthFail: true,
     takeoverOnConflict: true,
-    // webVersion: '2.2323.4',
     webVersionCache: {
         type: 'remote',
         remotePath: `https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/${wwebVersion}.html`
@@ -34,8 +33,6 @@ const client = new Client({
     }
 });
 
-let userState = {};
-
 client.on('qr', (qr) => {
     qrcode.generate(qr, { small: true });
 });
@@ -44,120 +41,131 @@ client.on('ready', () => {
     console.log('Client is ready!');
 });
 
-client.on('message', message => {
+client.on('message', async (message) => {
+    // console.log('Message received:', message);
     const chatId = message.from;
+    let user = await User.findOne({ where: { waChatId: chatId } });
 
-    // console.log('Message received from', chatId);
-    // console.log('userState', userState[chatId])
-    // console.log('Message body', message.body)
-
-    if (!userState[chatId]) {
-        userState[chatId] = { currentBlock: null, data: {} };
+    if (!user) {
+        const waNumber = message.from.split('@')[0];
+        const waInfo = await client.getContactById(chatId);
+        const name = waInfo.pushname || waInfo.verifiedName || waInfo.formattedName || waInfo.shortName;
+        user = await User.create({ name, waChatId: chatId, waNumber, waInfo, lastBlockId: null });
     }
 
-    handleUserMessage(message);
+    await handleUserMessage(message, user);
 });
 
-const handleUserMessage = async (message) => {
-    const chatId = message.from;
-    const state = userState[chatId];
-    const currentBlock = state.currentBlock;
+const handleUserMessage = async (message, user) => {
+    // const chatId = message.from;
+    const currentBlock = user.lastBlockId ? await Block.findByPk(user.lastBlockId) : null;
     const userInput = message.body.trim().toLowerCase();
 
-    if (!currentBlock) {
-        state.currentBlock = blocks.find(block => block.isStartPoint);
-        await sendBlockMessage(message, state);
+    // check if last block at is more than 1 hours
+    const isMoreThanHour = currentBlock && user.lastBlockAt && (new Date() - user.lastBlockAt) > 3600000;
+
+    if (!currentBlock || isMoreThanHour) {
+        const startBlock = await Block.findOne({ where: { isStartPoint: true } });
+        if (!startBlock) {
+            return;
+        }
+        user.lastBlockId = startBlock.id;
+        await user.save();
+        await sendBlockMessage(message, startBlock, user);
         return;
     }
 
     if (currentBlock.type === 'buttons') {
-        // Cek apakah userInput adalah nomor urut
         let option;
         const optionIndex = parseInt(userInput) - 1;
-        if (!isNaN(optionIndex) && currentBlock.options[optionIndex]) {
-            option = currentBlock.options[optionIndex];
+        if (!isNaN(optionIndex)) {
+            const options = await BlockOption.findAll({ where: { blockId: currentBlock.id } });
+            if (options[optionIndex]) {
+                option = options[optionIndex];
+            }
         }
 
-        // Jika bukan nomor urut atau tidak ditemukan, cari berdasarkan teks
         if (!option) {
-            option = currentBlock.options.find(opt => opt.text.toLowerCase().includes(userInput));
+            const options = await BlockOption.findAll({ where: { blockId: currentBlock.id } });
+            option = options.find(opt => opt.text.toLowerCase().includes(userInput));
         }
 
         if (option) {
-            state.currentBlock = blocks.find(block => block.id === option.next);
-            await sendBlockMessage(message, state);
+            const nextBlock = await Block.findByPk(option.nextId);
+            user.lastBlockId = nextBlock.id;
+            await user.save();
+            await sendBlockMessage(message, nextBlock, user);
         } else {
             await message.reply('Silakan pilih opsi yang valid.');
         }
     } else if (currentBlock.type === 'question') {
         const inputKey = currentBlock.input;
-        state.data[inputKey] = message.body;
-        state.currentBlock = blocks.find(block => block.id === currentBlock.next);
-        await sendBlockMessage(message, state);
-    } else if (currentBlock.type === 'message') {
-        // message.reply(currentBlock.text);
-        if (currentBlock.next) {
-            state.currentBlock = blocks.find(block => block.id === currentBlock.next);
-            await sendBlockMessage(message, state);
+        // await UserData.create({ userId: user.id, key: inputKey, value: message.body });
+
+        // create or update userdata by key and userid
+        let userData = await UserData.findOne({ where: { userId: user.id, key: inputKey } });
+        if (!userData) {
+            userData = await UserData.create({ userId: user.id, key: inputKey, value: message.body });
+        } else {
+            userData.value = message.body;
+            await userData.save();
         }
 
-        // if current block doesn't have next block, reset user state
-        if (!currentBlock.next) {
-            // reset userstate
-            userState[chatId] = { currentBlock: null, data: {} };
-            state.currentBlock = null;
-
-            await handleUserMessage(message);
+        const nextBlock = await Block.findByPk(currentBlock.nextId);
+        user.lastBlockId = nextBlock.id;
+        await user.save();
+        await sendBlockMessage(message, nextBlock, user);
+    } else if (currentBlock.type === 'message') {
+        await message.reply(currentBlock.text);
+        if (currentBlock.nextId) {
+            const nextBlock = await Block.findByPk(currentBlock.nextId);
+            user.lastBlockId = nextBlock.id;
+            await user.save();
+            await sendBlockMessage(message, nextBlock, user);
+        } else {
+            user.lastBlockId = null;
+            await user.save();
+            await handleUserMessage(message, user);
         }
     }
-    
 };
 
-const sendBlockMessage = async (message, state) => {
-    const currentBlock = state.currentBlock;
-    let replyMessage = currentBlock?.text || '';
+const sendBlockMessage = async (message, block, user) => {
+    let replyMessage = block.text;
 
-    // Gantikan placeholder dalam teks
-    replyMessage = replyMessage.replace(/{(\w+)}/g, (_, key) => {
-        const setting = settings.find(s => s.key === key);
-        return setting ? setting.value : (state.data[key] || key);
+    const settings = await Setting.findAll();
+    settings.forEach(setting => {
+        replyMessage = replyMessage.replace(`{${setting.key}}`, setting.value);
     });
 
-    // if user has options
-    if (currentBlock.type === 'buttons') {
+    const userDatas = await UserData.findAll({ where: { userId: user.id } });
+    userDatas.forEach(data => {
+        replyMessage = replyMessage.replace(`{${data.key}}`, `*${data.value}*`);
+    });
+
+    if (block.type === 'buttons') {
+        const options = await BlockOption.findAll({ where: { blockId: block.id } });
         replyMessage += '\n\n';
-        currentBlock.options.forEach((option, index) => {
+        options.forEach((option, index) => {
             replyMessage += `${index + 1}. ${option.text}\n`;
         });
     }
 
-    if (currentBlock.type === 'buttons' && currentBlock.image) {
-        // check if image is url or base64 or file path
-        const isUrl = currentBlock.image.startsWith('http');
-        const isFilePath = currentBlock.image.startsWith('file://');
-        let messageMediaContent = null;
-        if (isUrl) {
-            messageMediaContent = await MessageMedia.fromUrl(currentBlock.image, { unsafeMime: true });
-        } else if (isFilePath) {
-            const filePath = currentBlock.image.replace('file://', '');
-            messageMediaContent = MessageMedia.fromFilePath(filePath);
+    const images = await BlockImage.findAll({ where: { blockId: block.id } });
+    for (const image of images) {
+        let messageMediaContent;
+        if (image.type === 'url') {
+            if (!await isUrlExists(image.image)) {
+                continue;
+            }
+            messageMediaContent = await MessageMedia.fromUrl(image.image, { unsafeMime: true });
+        } else {
+            messageMediaContent = MessageMedia.fromFilePath(image.image);
         }
-
-        
-        if (messageMediaContent) {
-            console.log('Sending image:', currentBlock.image);
-            await client.sendMessage(message.from, messageMediaContent);
-
-            console.log('Sent reply:', replyMessage);
-            await message.reply(replyMessage);
-
-        }
-    } else {
-        console.log('Sent reply:', replyMessage);
-        await message.reply(replyMessage);
+        await client.sendMessage(message.from, messageMediaContent);
     }
 
+    await message.reply(replyMessage);
 };
-
 
 client.initialize();

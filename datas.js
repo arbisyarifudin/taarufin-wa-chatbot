@@ -34,8 +34,7 @@ const blocks = [
     options: [
       {
         text: 'Daftar produk',
-        next: 3,
-        matchRules: ['1', 'produk', 'daftar']
+        next: 3
       },
       {
         text: 'Alamat',
