@@ -7,9 +7,17 @@ const isUrlExists = util.promisify(urlExists);
 const { sequelize, Setting, Block, BlockOption, User, UserData, BlockImage } = require('./models');
 
 const wwebVersion = '2.2407.3';
+
+let sessionName = 'session-123';
+if (process.argv.length > 2) {
+    sessionName = process.argv[2];
+}
+console.log('Session name:', sessionName);
+
 const client = new Client({
     authStrategy: new LocalAuth({
-        clientId: 'session-123',
+        clientId: sessionName,
+        dataPath: '.puppeteer/chatbot_data',
     }),
     qrMaxRetries: 10,
     restartOnAuthFail: true,
@@ -46,7 +54,7 @@ client.on('message', async (message) => {
     if (!message.from.includes('@c.us') || !message.body || message.body.trim().length === 0 || message.from.includes('status@broadcast') || message.hasMedia) {
         return;
     }
-    
+
     const chatId = message.from;
     let user = await User.findOne({ where: { waChatId: chatId } });
 
@@ -60,13 +68,100 @@ client.on('message', async (message) => {
     await handleUserMessage(message, user);
 });
 
+// validate message
+const validateMessage = async (message, block) => {
+    const messageBody = message.body.trim();
+    const matchRules = block.matchRules;
+    if (matchRules && matchRules.length > 0) {
+        for (const rule of matchRules) {
+            // console.log('blockID:', block.id);
+            // console.log('rule:', rule);
+            if (rule.type === 'greaterThan') {
+                if (messageBody.length <= rule.value) {
+                    await message.reply(`Silakan masukkan minimal ${rule.value} karakter.`);
+                    return;
+                }
+            }
+
+            if (rule.type === 'greaterThanAndEqual') {
+                console.log('greaterThanAndEqual:', messageBody.length, rule.value);
+                if (messageBody.length < rule.value) {
+                    await message.reply(`Silakan masukkan minimal ${rule.value} karakter.`);
+                    return;
+                }
+            }
+
+            if (rule.type === 'validEmail') {
+                if (!messageBody.includes('@')) {
+                    await message.reply('Silakan masukkan alamat email yang valid.');
+                    return;
+                }
+            }
+
+            if (rule.type === 'validDate') {
+                const pattern = rule.pattern || 'DD-MM-YYYY';
+                const moment = require('moment');
+                const date = moment(messageBody, pattern, true);
+                if (!date.isValid()) {
+                    await message.reply(`Silakan masukkan tanggal yang valid dengan format ${pattern}.`);
+                    return;
+                }
+            }
+
+            if (rule.type === 'inArray') {
+                if (!rule.in.includes(messageBody)) {
+                    await message.reply(`Silakan pilih dari pilihan yang tersedia. *[${rule.in.join(', ')}]*`);
+                    return;
+                }
+            }
+
+            if (rule.type === 'contains') {
+                const messageBodyToLower = messageBody.toLowerCase();
+                if (Array.isArray(rule.value)) {
+                    if (!rule.value.some(val => messageBodyToLower.includes(val.toLowerCase()))) {
+                        await message.reply(`Balasan tidak valid. Silakan periksa kembali..`);
+                        return;
+                    }
+                } else {
+                    if (!messageBodyToLower.includes(rule.value.toLowerCase())) {
+                        await message.reply(`Balasan tidak valid. Silakan periksa kembali..`);
+                        return;
+                    }
+                }
+            }
+
+            if (rule.type === 'contains_all') {
+                const messageBodyToLower = messageBody.toLowerCase();
+                if (Array.isArray(rule.value)) {
+                    if (!rule.value.every(val => messageBodyToLower.includes(val.toLowerCase()))) {
+                        await message.reply(`Balasan tidak valid. Silakan periksa kembali..`);
+                        return;
+                    }
+                } else {
+                    if (!messageBodyToLower.includes(rule.value.toLowerCase())) {
+                        await message.reply(`Balasan tidak valid. Silakan periksa kembali..`);
+                        return;
+                    }
+                }
+            }
+        }
+    }
+
+    return true
+}
+
 const handleUserMessage = async (message, user) => {
     // const chatId = message.from;
     const currentBlock = user.lastBlockId ? await Block.findByPk(user.lastBlockId) : null;
     const userInput = message.body.trim().toLowerCase();
 
     // check if last block at is more than 48 hours
-    const isBackToReset = (currentBlock && user.lastBlockAt && (new Date() - user.lastBlockAt) > 48 * 60 * 60 * 1000) || !user.lastBlockId; 
+    const isBackToReset = (currentBlock && user.lastBlockAt && (new Date() - user.lastBlockAt) > 48 * 60 * 60 * 1000) || (!user.lastBlockId && !user.lastBlockAt);
+
+    // console.log('user:', user);
+    // console.log('currentBlock:', currentBlock);
+    // console.log('isBackToReset:', isBackToReset);
+
 
     // if (!currentBlock || isBackToReset) {
     if (isBackToReset) {
@@ -74,14 +169,19 @@ const handleUserMessage = async (message, user) => {
         if (!startBlock) {
             return;
         }
-        user.lastBlockId = startBlock.id;
-        user.lastBlockAt = new Date();
-        await user.save();
+        // user.lastBlockId = startBlock.id;
+        // user.lastBlockAt = new Date();
+        // await user.save();
         await sendBlockMessage(message, startBlock, user);
         return;
     }
 
     if (!currentBlock) {
+        return;
+    }
+
+    // validate message
+    if (await validateMessage(message, currentBlock) !== true) {
         return;
     }
 
@@ -97,20 +197,29 @@ const handleUserMessage = async (message, user) => {
         }
 
         if (!option) {
-            option = options.find(opt => opt.text.toLowerCase().includes(userInput));
+            // option = options.find(opt => opt.text.toLowerCase().includes(userInput));
+
+            // match words
+            option = options.find(opt => opt.text.toLowerCase().split(' ').some(word => userInput.toLowerCase().includes(word)));
         }
 
         if (option) {
             const nextBlock = await Block.findByPk(option.nextId);
-            user.lastBlockId = nextBlock.id;
-            user.lastBlockAt = new Date();
-            await user.save();
+            if (!nextBlock) {
+                await resetUserState(user)
+                return
+            }
+            // user.lastBlockId = nextBlock.id;
+            // user.lastBlockAt = new Date();
+            // await user.save();
             await sendBlockMessage(message, nextBlock, user);
         } else {
             if (options.length > 1) {
-                await message.reply('Balasan tidak valid. Silakan pilih dari opsi yang tersedia.');
+                // await message.reply('Balasan tidak valid. Silakan pilih dari opsi yang tersedia.');
+                await message.reply('Sepertinya balasan tidak sesuai pilihan yang tersedia. Mohon periksa kembali ya..');
             } else {
-                await message.reply('Balasan tidak valid.');
+                // await message.reply('Balasan tidak valid.');
+                await message.reply('Sepertinya balasan kamu tidak sesuai. Mohon periksa kembali ya..');
             }
         }
     } else if (currentBlock.type === 'question') {
@@ -126,24 +235,47 @@ const handleUserMessage = async (message, user) => {
             await userData.save();
         }
 
+        // update userData 'age' if 'dob' is updated
+        if (inputKey === 'dob') {
+            const dob = new Date(message.body);
+            const age = new Date().getFullYear() - dob.getFullYear();
+            let ageUserData = await UserData.findOne({ where: { userId: user.id, key: 'age' } });
+            if (!ageUserData) {
+                ageUserData = await UserData.create({ userId: user.id, key: 'age', value: age });
+            } else {
+                ageUserData.value = age;
+                await ageUserData.save();
+            }
+        }
+
         const nextBlock = await Block.findByPk(currentBlock.nextId);
-        user.lastBlockId = nextBlock.id;
-        user.lastBlockAt = new Date();
-        await user.save();
+        if (!nextBlock) {
+            await resetUserState(user)
+            return
+        }
+        // user.lastBlockId = nextBlock.id;
+        // user.lastBlockAt = new Date();
+        // await user.save();
         await sendBlockMessage(message, nextBlock, user);
     } else if (currentBlock.type === 'message') {
         await message.reply(currentBlock.text);
         if (currentBlock.nextId) {
             const nextBlock = await Block.findByPk(currentBlock.nextId);
-            user.lastBlockId = nextBlock.id;
-            user.lastBlockAt = new Date();
-            await user.save();
+            if (!nextBlock) {
+                await resetUserState(user)
+                return
+            }
+            // user.lastBlockId = nextBlock.id;
+            // user.lastBlockAt = new Date();
+            // await user.save();
             await sendBlockMessage(message, nextBlock, user);
         } else {
-            user.lastBlockId = null;
-            user.lastBlockAt = null;
-            await user.save();
-            // await handleUserMessage(message, user);
+            // // reset user state
+            // user.lastBlockId = null;
+            // user.lastBlockAt = new Date();
+            // await user.save();
+            await resetUserState(user)
+
         }
     }
 };
@@ -155,54 +287,31 @@ const sendBlockMessage = async (message, block, user) => {
         return;
     }
 
-    // validate message
-    const matchRules = block.matchRules;
-    if (matchRules && matchRules.length > 0) {
-        for (const rule of matchRules) {
-            if (rule.type === 'greaterThan') {
-                if (message.body.trim().length <= rule.value) {
-                    await message.reply(`Silakan masukkan minimal ${rule.value} karakter.`);
-                    return;
-                }
-            } else if (rule.type === 'validEmail') {
-                if (!message.body.trim().includes('@')) {
-                    await message.reply('Silakan masukkan alamat email yang valid.');
-                    return;
-                }
-            } else if (rule.type === 'validDate') {
-                const pattern = rule.pattern || 'DD-MM-YYYY';
-                const moment = require('moment');
-                if (!moment(message.body.trim(), pattern).isValid()) {
-                    await message.reply(`Silakan masukkan tanggal yang valid dengan format ${pattern}.`);
-                    return;
-                }
-            } else if (rule.type === 'inArray') {
-                if (!rule.in.includes(message.body.trim())) {
-                    await message.reply(`Balasan tidak valid. Silakan pilih dari opsi yang tersedia.`);
-                    return;
-                }
-            }
-        }
-    }
-
+    // prepare reply message
 
     let replyMessage = block.text;
 
     const settings = await Setting.findAll();
     settings.forEach(setting => {
-        replyMessage = replyMessage.replace(`{${setting.key}}`, setting.value);
+        const regex = new RegExp(`{${setting.key}}`, 'g');
+        replyMessage = replyMessage.replace(regex, setting.value);
     });
-
+    
     const userDatas = await UserData.findAll({ where: { userId: user.id } });
     userDatas.forEach(data => {
-        replyMessage = replyMessage.replace(`{${data.key}}`, `*${data.value}*`);
+        const regex = new RegExp(`{${data.key}}`, 'g');
+        replyMessage = replyMessage.replace(regex, `*${data.value}*`);
     });
 
     if (block.type === 'buttons') {
         const options = await BlockOption.findAll({ where: { blockId: block.id } });
-        replyMessage += '\n\n';
+        if (options.length > 1) {
+            replyMessage += '\n\n*Pilihan*: \n';
+        } else {
+            replyMessage += '\n\n';
+        }
         options.forEach((option, index) => {
-            if (option.length > 1) {
+            if (options.length > 1) {
                 replyMessage += `${index + 1}. ${option.text}\n`;
             } else {
                 replyMessage += `${option.text}\n`;
@@ -231,6 +340,19 @@ const sendBlockMessage = async (message, block, user) => {
     //     user.lastBlockAt = null;
     //     await user.save();
     // }
+
+    // save user state
+    user.lastBlockId = block.id;
+    user.lastBlockAt = new Date();
+    await user.save();
 };
+
+const resetUserState = async (user) => {
+    if (!user) return
+    user.lastBlockId = null;
+    // user.lastBlockAt = null;
+    user.lastBlockAt = new Date();;
+    await user.save();
+}
 
 client.initialize();

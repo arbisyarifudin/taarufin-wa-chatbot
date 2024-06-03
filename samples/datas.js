@@ -5,7 +5,7 @@ const settings = [
   },
   {
     key: 'businessBotName',
-    value: 'Lidia'
+    value: 'Shafiyya'
   },
   {
     key: 'businessInstagramID',
@@ -44,9 +44,9 @@ const blocks = [
     type: 'buttons',
     text: `Wa 'alaikumussalam warahmatullahi wabarakatuh.
 
-    Perkenalkan, saya adalah {businessName} Bot bernama {businessBotName}.
+    Perkenalkan, saya adalah robot chat ramah bernama *{businessBotName}.*
     
-    Saya akan membantu proses pendaftaran Taaruf anda sambil menunggu Admin merespon pesan secara langsung.
+    Saya akan membantu proses pendaftaran {businessName} anda sambil menunggu Admin merespon pesan secara langsung.
     
     Senang bisa membantu kamu 😊 
     Semoga ini menjadi langkah awal bertemu jodoh yg baik ya...
@@ -57,7 +57,7 @@ const blocks = [
     ° Siap nikah *(Max 1 thn dr skrg)*
     ° Sholat 5 waktu & menutup aurat
     
-    Jika memenuhi kriteria di atas silahkan bergabung di {businessInstagramID}
+    Jika memenuhi kriteria di atas silahkan bergabung di *{businessInstagramID}*
 
 
     
@@ -75,14 +75,14 @@ const blocks = [
   {
     id: 2,
     type: 'buttons',
-    text: `Dijawab Oleh {businessBotName}
+    text: `Dijawab Oleh *{businessBotName}*
 
     *WAJIB DIPAHAMI*
     *WAJIB DIPAHAMI*
     *WAJIB DIPAHAMI*
     
     
-    1. Data peserta dipost di {businessInstagramID}.
+    1. Data peserta dipost di *{businessInstagramID}.*
     
     2. Peserta boleh mengajukan atau bisa juga menerima pengajuan. Jika ada yg mengajukan taaruf, minta beliau mengisi formulir kosong (seperti yg akan dikirim pada pesan berikutnya).
     
@@ -105,8 +105,8 @@ const blocks = [
     ° Jodoh Allah yg tentukan kita hanya berikhtiar.
     ° Mungkin saja kita berikhtiar di sini, tetapi ternyata jodoh kita adalah teman kecil/tetangga kita.
     
-    Ttd
-    Tim {businessInstagramID}
+    Ttd,
+    Tim *{businessInstagramID}*
     
     
     
@@ -123,7 +123,7 @@ const blocks = [
   {
     id: 3,
     type: 'question',
-    text: `Dijawab oleh {businessBotName}
+    text: `Dijawab oleh *{businessBotName}*
 
     Dibawah ini akan ada beberapa pertanyaan yang akan saya ajukan.
     Mohon isi dengan benar dan jangan sampai mengisi data yg salah. Khususnya Email.
@@ -132,20 +132,22 @@ const blocks = [
 
     Baik kita mulai..
      
-    Boleh saya tahu nama lengkap kamu?`,
+    Boleh saya tahu nama kamu? *_(Boleh diisi nama asli/samaran/panggilan)_`,
     input: 'name',
     next: 4,
     matchRules: [
       {
-        type: 'greaterThan',
-        value: 3
+        type: 'greaterThanAndEqual',
+        value: 5
       }
     ]
   },
   {
     id: 4,
     type: 'question',
-    text: `Halo {name}, salam kenal. 
+    text: `Dijawab oleh *{businessBotName}*
+    
+    Halo {name}, salam kenal. 
     
     Apa alamat email aktif milik kamu?`,
     input: 'email',
@@ -159,7 +161,9 @@ const blocks = [
   {
     id: 5,
     type: 'question',
-    text: 'Berapa tanggal lahir kamu? (contoh: 25-01-1990)',
+    text: `Dijawab oleh *{businessBotName}*
+    
+    Berapa tanggal lahir kamu? (contoh: 25-01-1990)xxx`,
     input: 'dob',
     next: 6,
     matchRules: [
@@ -172,7 +176,9 @@ const blocks = [
   {
     id: 6,
     type: 'question',
-    text: 'Jenis kelamin kamu? (Laki-laki/Perempuan)',
+    text: `Dijawab oleh *{businessBotName}*
+    
+    Jenis kelamin kamu? (Laki-laki/Perempuan)`,
     input: 'gender',
     next: 7,
     matchRules: [
@@ -185,7 +191,7 @@ const blocks = [
   {
     id: 7,
     type: 'question',
-    text: `Dijawab oleh {businessBotName}
+    text: `Dijawab oleh *{businessBotName}*
 
     Silahkan *dicopy, diisi dan dikirim kembali ke sini.*
     
@@ -196,14 +202,13 @@ const blocks = [
 
     *Revisi hanya bisa dilakukan setelah 1 minggu.*
 
-    *Data tersebut akan dipost di IG {businessInstagramID}*
+    *Data tersebut akan dipost di IG *{businessInstagramID}**
 
 
 
-
-
-    SALIN DAN ISI FORMULIR DIBAWAH INI
     * * *
+
+    *SALIN DAN ISI FORMULIR DIBAWAH INI*
 
     Nama: {name}
     Kota:
@@ -218,8 +223,8 @@ const blocks = [
     Ciri fisik saya:
     Jika bersungguh-sungguh hubungi saya melalui, 
     EMAIL: {email} (wajib diisi) 
-    .
-    .
+
+
     Tambahan:
     
 
@@ -227,11 +232,17 @@ const blocks = [
     `,
     input: 'form',
     next: 8,
+    matchRules: [
+      {
+        type: 'contains_all',
+        value: ['Nama:', 'Jns kelamin:', 'Usia:', 'Status:', 'Pekerjaan', 'Pendidikan:', 'Sholat 5 waktu:', 'Kriteria calon:', 'Target nikah:', 'Ciri fisik saya:', 'EMAIL:']
+      }
+    ]
   },
   {
     id: 8,
     type: 'buttons',
-    text: `Dijawab oleh {businessBotName}
+    text: `Dijawab oleh *{businessBotName}*
 
     Syukron sudah mengisi formulir. 😊
     Apakah kamu serius mau menikah..?`,
@@ -247,13 +258,17 @@ const blocks = [
       {
         text: 'TIDAK SERIUS',
         next: 12
+      },
+      {
+        text: 'UBAH FORMULIR',
+        next: 7
       }
     ]
   },
   {
     id: 9,
     type: 'buttons',
-    text: `Dijawab oleh {businessBotName}
+    text: `Dijawab oleh *{businessBotName}*
 
     Baik, kalau ada yg cocok dan sesuai kriteria,
     apakah dalam waktu (Maximal 1 tahun dr sekarang) Anda siap nikah?`,
@@ -271,40 +286,46 @@ const blocks = [
   {
     id: 10,
     type: 'message',
-    text: `Dijawab oleh {businessBotName}
+    // text: `Dijawab oleh *{businessBotName}*
 
-    Alhamdulillah, semoga Allah memudahkan ikhtiar menjemput jodoh ya.. 😊
+    // Alhamdulillah, semoga Allah memudahkan ikhtiar menjemput jodoh ya.. 😊
     
-    Baik, sebagai komitmen keseriusan, peserta dipersilahkan memberikan infaq terbaiknya (untuk kelangsungan program ini).
+    // Baik, sebagai komitmen keseriusan, peserta dipersilahkan memberikan infaq terbaiknya (untuk kelangsungan program ini).
     
-    Setelah menyelesaikan infaq data akan dipost di instagram {businessInstagramID}
+    // Setelah menyelesaikan infaq data akan dipost di instagram *{businessInstagramID}*
     
-    BANK SYARIAH INDONESIA: (451) 7174170597
-    Atas Nama: Siti Maulida
+    // BANK SYARIAH INDONESIA: (451) 7174170597
+    // Atas Nama: Arbi Syarifudin
     
-    atau
+    // atau
     
-    BANK BCA: (014) 8610731130
-    Atas Nama: Siti Maulida
+    // BANK BCA: (014) 8610731130
+    // Atas Nama: Arbi Syarifudin
     
-    Semoga segera bertemu jodohnya ya.
+    // Semoga segera bertemu jodohnya ya.
     
-    Harap konfirmasi dengan mengirim struk jika sudah menyelesaikan infaq.
-    
-    
-    Jika WA Admin tidak merespon dlm 24 jam setelah struk bukti transfer dikirim, silahkan konfirmasi ulang disini. 
+    // Harap konfirmasi dengan mengirim struk jika sudah menyelesaikan infaq.
     
     
+    // Jika WA Admin tidak merespon dlm 24 jam setelah struk bukti transfer dikirim, silahkan konfirmasi ulang disini. 
     
     
     
-    Official Instagram: {businessInstagramUrl}`,
+    
+    
+    // Official Instagram: *{businessInstagramUrl}*`,
+    text: `Dijawab oleh Shafiyya
+
+    Baik. Terima kasih telah melengkapi formulirnya.
+    Segera kami proses ya.. 😊
+    
+    *Luruskan niat karena Allah. Semoga Allah beri kemudahan. Jika cocok segera menuju Khitbah & Nikah. Jika tidak, segera sudahi. Jangan berkomunikasi diluar media yang sudah ditentukan (hanya via Email).*`,
     next: null
   },
   {
     id: 11,
-    type: 'message',
-    text: `Dijawab oleh {businessBotName}
+    type: 'buttons',
+    text: `Dijawab oleh *{businessBotName}*
 
     Baik, terima kasih atas kejujuran kamu.
     Sayang sekali, dikarenakan belum siap menikah dalam waktu dekat, kami tidak bisa melanjutkan proses taaruf ini.
@@ -312,22 +333,40 @@ const blocks = [
     Semoga Allah memudahkan ikhtiar menjemput jodoh ya.. 😊
     Terima kasih atas partisipasinya.
     
-    Official Instagram: {businessInstagramUrl}`,
-    next: null
+    Official Instagram: *{businessInstagramUrl}*`,
+    options: [
+      {
+        text: 'RALAT JAWABAN',
+        next: 9
+      },
+      {
+        text: 'Tidak masalah. Terima kasih juga.',
+        next: null
+      }
+    ]
   },
   {
     id: 12,
-    type: 'message',
-    text: `Dijawab oleh {businessBotName}
+    type: 'buttons',
+    text: `Dijawab oleh *{businessBotName}*
 
     Baik, terima kasih atas kejujuran kamu.
-    Sayang sekali, dikarenakan kamu ragu-ragu atau tidak serius menikah, kami tidak bisa melanjutkan proses taaruf ini.
+    Sayang sekali, *dikarenakan kamu ragu-ragu atau tidak serius menikah*, kami tentu tidak bisa melanjutkan proses taaruf ini.
 
     Semoga Allah memudahkan ikhtiar menjemput jodoh ya.. 😊
     Terima kasih atas partisipasinya.
 
-    Official Instagram: {businessInstagramUrl}`,
-    next: null
+    Official Instagram: *{businessInstagramUrl}*`,
+    options: [
+      {
+        text: 'RALAT JAWABAN',
+        next: 8
+      },
+      {
+        text: 'Tidak masalah. Terima kasih juga.',
+        next: null
+      }
+    ]
   }
 ]
 
