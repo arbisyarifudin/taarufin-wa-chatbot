@@ -14,7 +14,7 @@ app.use(bodyParser.urlencoded({ extended: false }));
 // parse application/json
 app.use(bodyParser.json());
 
-app.get('/settings', async (req, res) => {
+app.get('/setting', async (req, res) => {
     try {
         const settings = await Setting.findAll();
         res.json({ data: settings });
@@ -23,12 +23,26 @@ app.get('/settings', async (req, res) => {
     }
 });
 
-app.put('/settings/:key', async (req, res) => {
+app.put('/setting/:key', async (req, res) => {
     const { key } = req.params;
     const { value } = req.body;
+
+    if (!value) {
+        res.status(400).json({ error: 'Missing required field: "value"' });
+        return;
+    }
+
     try {
         const [updated] = await Setting.update({ value }, { where: { key } });
-        res.json({ updated });
+
+        if (!updated) {
+            res.status(500).json({ error: 'Failed to update setting' });
+            return;
+        }
+
+        const setting = await Setting.findOne({ where: { key } });
+
+        res.json({ data: setting });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
