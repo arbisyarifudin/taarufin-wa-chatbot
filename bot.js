@@ -64,8 +64,9 @@ client.on('message', async (message) => {
 
     if (!user) {
         const waNumber = message.from.split('@')[0];
-        const waInfo = await client.getContactById(chatId);
+        let waInfo = await client.getContactById(chatId);
         const name = waInfo.pushname || waInfo.verifiedName || waInfo.formattedName || waInfo.shortName;
+        waInfo = waInfo ? JSON.parse(JSON.stringify(waInfo)) : null;
         user = await User.create({ name, waChatId: chatId, waNumber, waInfo, lastBlockId: null });
     }
 

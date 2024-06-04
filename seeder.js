@@ -64,7 +64,8 @@ const seedDatabase = async () => {
                 type: block.type,
                 input: block.input || null,
                 isStartPoint: block.isStartPoint || false,
-                matchRules: block.matchRules || null
+                // matchRules: block.matchRules || null
+                matchRules: block.matchRules ? JSON.parse(JSON.stringify(block.matchRules)) : null
             }
         });
 
@@ -72,7 +73,8 @@ const seedDatabase = async () => {
             instance.text = block.text;
             instance.input = block.input || null;
             instance.isStartPoint = block.isStartPoint || false;
-            instance.matchRules = block.matchRules || null;
+            // instance.matchRules = block.matchRules || null;
+            instance.matchRules = block.matchRules ? JSON.parse(JSON.stringify(block.matchRules)) : null
             await instance.save()
         }
     }
