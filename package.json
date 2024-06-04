@@ -1,4 +1,8 @@
 {
+  "scripts": {
+    "start:api": "nodemon api.js",
+    "start:bot": "node bot.js"
+  },
   "dependencies": {
     "body-parser": "^1.20.2",
     "dotenv": "^16.4.5",
@@ -9,5 +13,8 @@
     "sqlite3": "^5.1.7",
     "url-exists": "^1.0.3",
     "whatsapp-web.js": "github:pedroslopez/whatsapp-web.js#webpack-exodus"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.3"
   }
 }
