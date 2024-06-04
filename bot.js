@@ -84,7 +84,7 @@ const validateMessage = async (message, block) => {
             }
 
             if (rule.type === 'greaterThanAndEqual') {
-                console.log('greaterThanAndEqual:', messageBody.length, rule.value);
+                // console.log('greaterThanAndEqual:', messageBody.length, rule.value);
                 if (messageBody.length < rule.value) {
                     await message.reply(`Silakan masukkan minimal ${rule.value} karakter.`);
                     return;
