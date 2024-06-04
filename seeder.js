@@ -9,7 +9,7 @@ const seedDatabase = async () => {
     }
 
     await sequelize.sync({ force: forceRefresh });
-        
+
 
     // await Setting.create({ key: 'businessName', value: 'Toko' });
 
@@ -36,7 +36,6 @@ const seedDatabase = async () => {
         }
     }
 
-
     for (const block of blocks) {
         // await Block.create({
         //     type: block.type,
@@ -57,7 +56,7 @@ const seedDatabase = async () => {
         //     }
         // });
 
-         // find or create or update
+        // find or create or update
         const [instance, created] = await Block.findOrCreate({
             where: { id: block.id, type: block.type },
             defaults: {
@@ -78,15 +77,31 @@ const seedDatabase = async () => {
         }
     }
 
+    // Fetch all blocks from the database
+    const allBlocks = await Block.findAll();
+    const blocksMap = {};
+    allBlocks.forEach(block => {
+        // blocksMap[block.type + block.text] = block;
+        // blocksMap[block.type + block.text.trim()] = block;
+        blocksMap[block.type + block.id] = block;
+        blocksMap[block.id] = block;
+    });
+    
+    // console.log('blocksMap:', blocksMap);
+
     for (const block of blocks) {
-        const currentBlock = await Block.findOne({ where: { type: block.type, text: block.text } });
+        // const currentBlock = await Block.findOne({ where: { type: block.type, text: block.text } });
+        // let currentBlock = blocksMap[block.type + block.text.trim()];
+        let currentBlock = blocksMap[block.type + block.id];
+        // console.log('currentBlock:', currentBlock);
         if (!currentBlock) {
-            console.error('Block not found:', block);
+            console.error('Block not found:', block.id, block.type);
             continue;
         }
 
         if (block.next) {
-            const nextBlock = await Block.findOne({ where: { id: block.next } });
+            // const nextBlock = await Block.findOne({ where: { id: block.next } });
+            const nextBlock = blocksMap[block.next];
             currentBlock.nextId = nextBlock.id;
             await currentBlock.save();
         }
@@ -101,7 +116,7 @@ const seedDatabase = async () => {
                 // }
                 const nextBlock = await Block.findOne({ where: { id: option.next } });
                 await BlockOption.create({
-                    text: option.text,
+                    text: option.text.trim(),
                     nextId: nextBlock ? nextBlock.id : null,
                     blockId: currentBlock.id
                 });
