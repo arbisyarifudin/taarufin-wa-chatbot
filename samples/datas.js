@@ -314,9 +314,9 @@ const blocks = [
     
     
     // Official Instagram: *{businessInstagramUrl}*`,
-    text: `Dijawab oleh Shafiyya
+    text: `Dijawab oleh *{businessBotName}*
 
-    Baik. Terima kasih telah melengkapi formulirnya.
+    Baik. Terima kasih atas partisipasinya.
     Segera kami proses ya.. 😊
     
     *Luruskan niat karena Allah. Semoga Allah beri kemudahan. Jika cocok segera menuju Khitbah & Nikah. Jika tidak, segera sudahi. Jangan berkomunikasi diluar media yang sudah ditentukan (hanya via Email).*`,
