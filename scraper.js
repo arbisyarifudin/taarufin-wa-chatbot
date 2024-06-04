@@ -124,19 +124,16 @@ async function waitForTimeout(timeout = null) {
 
 // Fungsi utama untuk mengelola proses
 async function main() {
+
+    const tempDir = path.resolve('./.puppeteer/scrapper_data/');
+    if (!fs.existsSync(tempDir)) {
+        fs.mkdirSync(tempDir, { recursive: true });
+    }
+
     const browser = await puppeteer.launch({
         headless: true,
-        args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-accelerated-2d-canvas',
-            '--no-first-run',
-            '--no-zygote',
-            '--single-process', // <- this one doesn't works in Windows
-            '--disable-gpu'
-        ],
-        userDataDir: path.join(__dirname, '.puppeteer/scraper_data')
+        args: ['--no-sandbox', '--disable-setuid-sandbox'],
+        userDataDir: tempDir
     });
     const page = await browser.newPage();
 
@@ -162,10 +159,10 @@ async function main() {
             }
 
             console.log('Go to Instagram home page...');
-            await page.waitForNavigation({ waitUntil: 'networkidle2' });
+            await page.waitForNavigation({ waitUntil: 'networkidle2' }, { timeout: 60000 });
 
             // Wait for user to login
-            await page.waitForSelector('svg[aria-label="Settings"]', { timeout: 0 });
+            await page.waitForSelector('svg[aria-label="Settings"]');
             console.log('Login success!');
 
             // Save cookies
