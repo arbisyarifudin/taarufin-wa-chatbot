@@ -176,9 +176,9 @@ const handleUserMessage = async (message, user) => {
         if (!startBlock) {
             return;
         }
-        // user.lastBlockId = startBlock.id;
-        // user.lastBlockAt = new Date();
-        // await user.save();
+        user.lastBlockId = startBlock.id;
+        user.lastBlockAt = new Date();
+        await user.save();
         await sendBlockMessage(message, startBlock, user);
         return;
     }
@@ -248,7 +248,7 @@ const handleUserMessage = async (message, user) => {
             const age = new Date().getFullYear() - dob.getFullYear();
             let ageUserData = await UserData.findOne({ where: { userId: user.id, key: 'age' } });
             if (!ageUserData) {
-                ageUserData = await UserData.create({ userId: user.id, key: 'age', value: age });
+                ageUserData = await UserData.create({ userId: user.id, key: 'age', value: age > 0 ? age : 0});
             } else {
                 ageUserData.value = age;
                 await ageUserData.save();
@@ -346,7 +346,7 @@ const sendBlockMessage = async (message, block, user, option = null) => {
     if (block.type !== 'buttons' && !block.nextId) {
         await resetUserState(user)
         return
-    } else if (block.type === 'buttons' && !option?.nextId) {
+    } else if (block.type === 'buttons' && (option && !option?.nextId)) {
         await resetUserState(user)
         return
     }
