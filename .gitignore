@@ -3,3 +3,5 @@ node_modules
 .wwebjs_*
 .puppeteer
 storages/scraper_*
+chatbot.db
+*.db
