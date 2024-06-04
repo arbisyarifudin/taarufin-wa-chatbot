@@ -2,6 +2,7 @@ const puppeteer = require('puppeteer');
 const fs = require('fs');
 const path = require('path');
 // const cron = require('node-cron');
+const TimeoutError = puppeteer.errors.TimeoutError;
 
 // load env
 require('dotenv').config();
@@ -43,9 +44,8 @@ async function loginInstagram(page, username, password) {
             return false;
         }
     } catch (error) {
-        if (error instanceof puppeteer.errors.TimeoutError) {
-            console.error(error);
-
+        console.error(error);
+        if (error instanceof TimeoutError) {
             // check apakah kita dibawah ke halaman /challenge
             const pathname = await page.evaluate(() => window.location.pathname);
             console.log('window.location.pathname:', pathname);
