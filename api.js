@@ -3,7 +3,7 @@ const bodyParser = require('body-parser');
 const { sequelize, Setting, Block, BlockOption } = require('./models');
 
 const app = express();
-const port = 3000;
+const port = 1000;
 
 app.use(bodyParser.json());
 
