@@ -14,6 +14,7 @@ const PASSWORD = 'Taarufin@2024.2';
 const CAPTIONS_FILE = 'storages/scraper_captions';
 const POST_IDS_FILE = 'storages/scraper_ids.json';
 const COOKIES_FILE = 'storages/scraper_cookies.json';
+const USER_DIR = '.puppeteer/scraper_data'
 
 const userAgent = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/64.0.3282.39 Safari/537.36';
 
@@ -25,7 +26,7 @@ async function loginInstagram(page, username, password) {
     // await page.type('input[name="password"]', password);
 
     try {
-        await page.waitForSelector('input[aria-label="Phone number, username or email address"]', { timeout: 5000 });
+        await page.waitForSelector('input[aria-label="Phone number, username or email address"]');
 
         await page.type('input[aria-label="Phone number, username or email address"]', username, { delay: Math.floor(Math.random() * 150) + 100 });
         await page.type('input[aria-label="Password"]', password, { delay: Math.floor(Math.random() * 150) + 100 });
@@ -128,16 +129,19 @@ async function waitForTimeout(timeout = null) {
 // Fungsi utama untuk mengelola proses
 async function main() {
 
-    const tempDir = path.resolve('./.puppeteer/scrapper_data/');
+    const tempDir = path.resolve(USER_DIR);
     if (!fs.existsSync(tempDir)) {
         fs.mkdirSync(tempDir, { recursive: true });
+
+        // set permission
+        fs.chmodSync(tempDir, 0o777);
     }
 
     // get puppeter executable path from node_modules 
     let executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || puppeteer.executablePath();
 
     const appPath = path.resolve('./');
-    console.log('App path:', appPath);
+    // console.log('App path:', appPath);
 
     if (process.env.PUPPETEER_EXECUTABLE_PATH) {
         // if not leading slash
@@ -148,15 +152,25 @@ async function main() {
             executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
         }
     }
-    
+
     console.log('Puppeteer executable path:', executablePath);
     console.log('Launching browser...');
 
     const browser = await puppeteer.launch({
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox'],
+        headless: process.env.PUPPETEER_HEADLESS === 'true' ? true : false,
+        // args: ['--no-sandbox', '--disable-setuid-sandbox'],
+        args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-accelerated-2d-canvas',
+            '--no-first-run',
+            '--no-zygote',
+            '--single-process', // <- this one doesn't works in Windows
+            '--disable-gpu'
+        ],
         userDataDir: tempDir,
-        executablePath
+        executablePath,
     });
 
     console.log('Browser launched!');
