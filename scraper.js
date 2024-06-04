@@ -129,12 +129,29 @@ async function main() {
     if (!fs.existsSync(tempDir)) {
         fs.mkdirSync(tempDir, { recursive: true });
     }
+    
+    // get puppeter executable path from node_modules 
+    let executablePath = puppeteer.executablePath();
+
+    // check os
+    if (process.platform === 'win32') {
+        // node_modules\puppeteer-core\.local-chromium\win64-1045629\chrome-win\chrome.exe
+        executablePath = path.join(executablePath, '..', '..', '..', '..', 'chrome-win', 'chrome.exe');
+    } else if (process.platform === 'linux') {
+        // node_modules/puppeteer-core/.local-chromium/linux-1045629/chrome-linux64/chrome
+        executablePath = path.join(executablePath, '..', '..', '..', 'chrome-linux64', 'chrome');
+    }
+    console.log('Puppeteer executable path:', executablePath);
+    console.log('Launching browser...');
 
     const browser = await puppeteer.launch({
         headless: true,
         args: ['--no-sandbox', '--disable-setuid-sandbox'],
-        userDataDir: tempDir
+        userDataDir: tempDir,
+        executablePath
     });
+
+    console.log('Browser launched!');
     const page = await browser.newPage();
 
     // Set the user agent and disable the webdriver flag
@@ -239,7 +256,9 @@ async function main() {
     } catch (error) {
         console.error(error);
     } finally {
+        console.log('Closing browser...');
         await browser.close();
+        console.log('Browser closed!');
     }
 }
 
