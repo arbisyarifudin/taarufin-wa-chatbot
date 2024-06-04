@@ -3,6 +3,7 @@ const qrcode = require('qrcode-terminal');
 const util = require('util');
 const urlExists = require('url-exists');
 const isUrlExists = util.promisify(urlExists);
+const moment = require('moment');
 
 const { sequelize, Setting, Block, BlockOption, User, UserData, BlockImage } = require('./models');
 
@@ -51,6 +52,7 @@ client.on('ready', () => {
 
 client.on('message', async (message) => {
     // console.log('Message received:', message);
+    console.log('Message received:', message.body, 'from:', message.from, 'isGroup:', message.isGroupMsg, 'hasMedia:', message.hasMedia, 'isStatus:', message.from.includes('status@broadcast'));
     if (!message.from.includes('@c.us') || !message.body || message.body.trim().length === 0 || message.from.includes('status@broadcast') || message.hasMedia) {
         return;
     }
@@ -162,13 +164,15 @@ const handleUserMessage = async (message, user) => {
     const currentBlock = user.lastBlockId ? await Block.findByPk(user.lastBlockId) : null;
     const userInput = message.body.trim().toLowerCase();
 
+    // user.lastBlockAt = user.lastBlockAt === 'Invalid Date' || typeof user.lastBlockAt === 'Invalid Date' ? new Date() : user.lastBlockAt;
+    user.lastBlockAt = moment(user.lastBlockAt).isValid() || !user.lastBlockAt ? user.lastBlockAt : null;
+
     // check if last block at is more than 48 hours
     const isBackToReset = (currentBlock && user.lastBlockAt && (new Date() - user.lastBlockAt) > 48 * 60 * 60 * 1000) || (!user.lastBlockId && !user.lastBlockAt);
 
     // console.log('user:', user);
     // console.log('currentBlock:', currentBlock);
     // console.log('isBackToReset:', isBackToReset);
-
 
     // if (!currentBlock || isBackToReset) {
     if (isBackToReset) {
@@ -278,6 +282,8 @@ const handleUserMessage = async (message, user) => {
 
 const sendBlockMessage = async (message, block, user, option = null) => {
 
+    // console.log('sendBlockMessage:', block, user, option);
+
     // validate request
     if (!block || !message || !user) {
         return;
@@ -339,7 +345,8 @@ const sendBlockMessage = async (message, block, user, option = null) => {
 
     
     user.lastBlockId = block.id;
-    user.lastBlockAt = new Date();
+    // user.lastBlockAt = new Date();
+    user.lastBlockAt = moment().toDate();
     await user.save();
 
     // save user state
@@ -356,7 +363,8 @@ const resetUserState = async (user) => {
     if (!user) return
     user.lastBlockId = null;
     // user.lastBlockAt = null;
-    user.lastBlockAt = new Date();;
+    // user.lastBlockAt = new Date();
+    user.lastBlockAt = moment().toDate();
     await user.save();
 }
 
