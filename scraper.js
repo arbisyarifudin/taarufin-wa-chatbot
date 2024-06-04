@@ -3,6 +3,9 @@ const fs = require('fs');
 const path = require('path');
 // const cron = require('node-cron');
 
+// load env
+require('dotenv').config();
+
 const INSTAGRAM_URL = 'https://www.instagram.com';
 const TARGET_USERNAME = 'taaruf.co.id';
 const USERNAME = 'taarufin.official';
@@ -129,17 +132,31 @@ async function main() {
     if (!fs.existsSync(tempDir)) {
         fs.mkdirSync(tempDir, { recursive: true });
     }
-    
-    // get puppeter executable path from node_modules 
-    let executablePath = puppeteer.executablePath();
 
-    // check os
-    if (process.platform === 'win32') {
-        // node_modules\puppeteer-core\.local-chromium\win64-1045629\chrome-win\chrome.exe
-        executablePath = path.join(executablePath, '..', '..', '..', '..', 'chrome-win', 'chrome.exe');
-    } else if (process.platform === 'linux') {
-        // node_modules/puppeteer-core/.local-chromium/linux-1045629/chrome-linux64/chrome
-        executablePath = path.join(executablePath, '..', '..', '..', 'chrome-linux64', 'chrome');
+    // get puppeter executable path from node_modules 
+    let executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || puppeteer.executablePath();
+
+    const appPath = path.resolve('./');
+    console.log('App path:', appPath);
+
+    if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+        // if not leading slash
+        if (!process.env.PUPPETEER_EXECUTABLE_PATH.startsWith('/')) {
+            // remove leading slash and ending slash
+            executablePath = path.resolve(appPath, process.env.PUPPETEER_EXECUTABLE_PATH.replace(/\/$/, ''))
+        } else {
+            executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+        }
+    } else {
+        // check os
+        console.log('Platform:', process.platform);
+        if (process.platform === 'win32') {
+            // node_modules\puppeteer-core\.local-chromium\win64-1045629\chrome-win\chrome.exe
+            executablePath = path.join(appPath, 'node_modules', 'puppeteer-core', '.local-chromium', 'win64-1045629', 'chrome-win', 'chrome.exe');
+        } else if (process.platform === 'linux') {
+            // node_modules/puppeteer-core/.local-chromium/linux-1045629/chrome-linux64/chrome
+            executablePath = path.join(appPath, 'node_modules', 'puppeteer-core', '.local-chromium', 'linux-1045629', 'chrome-linux64', 'chrome');
+        }
     }
     console.log('Puppeteer executable path:', executablePath);
     console.log('Launching browser...');
