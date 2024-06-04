@@ -46,6 +46,12 @@ async function loginInstagram(page, username, password) {
         }
     } catch (error) {
         console.error(error);
+
+        // if os linux
+        if (process.platform === 'linux') {
+            console.log('check login html', await page.content());
+        }
+
         if (error instanceof TimeoutError) {
             // check apakah kita dibawah ke halaman /challenge
             const pathname = await page.evaluate(() => window.location.pathname);
