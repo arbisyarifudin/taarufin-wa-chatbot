@@ -147,17 +147,8 @@ async function main() {
         } else {
             executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
         }
-    } else {
-        // check os
-        console.log('Platform:', process.platform);
-        if (process.platform === 'win32') {
-            // node_modules\puppeteer-core\.local-chromium\win64-1045629\chrome-win\chrome.exe
-            executablePath = path.join(appPath, 'node_modules', 'puppeteer-core', '.local-chromium', 'win64-1045629', 'chrome-win', 'chrome.exe');
-        } else if (process.platform === 'linux') {
-            // node_modules/puppeteer-core/.local-chromium/linux-1045629/chrome-linux64/chrome
-            executablePath = path.join(appPath, 'node_modules', 'puppeteer-core', '.local-chromium', 'linux-1045629', 'chrome-linux64', 'chrome');
-        }
     }
+    
     console.log('Puppeteer executable path:', executablePath);
     console.log('Launching browser...');
 
