@@ -106,7 +106,7 @@ app.get('/user/:id', async (req, res) => {
 
 app.put('/user/:id', async (req, res) => {
     const { id } = req.params;
-    
+
     // find user
     const user = await User.findByPk(id);
     if (!user) {
@@ -118,7 +118,7 @@ app.put('/user/:id', async (req, res) => {
         res.status(400).json({ error: 'Missing required fields' });
         return;
     }
-    
+
     // replace empty field with old data
     const oldDatas = user.dataValues;
 
@@ -170,13 +170,110 @@ app.delete('/user/:id', async (req, res) => {
 })
 
 app.get('/block', async (req, res) => {
+    const { keyword, type, nextId, limit, page, isStartPoint, parentId } = req.query;
     try {
-        const blocks = await Block.findAll({ include: [{ model: BlockOption, as: 'options' }] });
-        res.json({ data: blocks });
+        // const blocks = await Block.findAll({ include: [{ model: BlockOption, as: 'options' }] });
+
+        const where = {};
+
+        if (keyword) {
+            where.text = { [sequelize.Op.like]: `%${keyword}%` };
+        }
+
+        if (type) {
+            where.type = type;
+        }
+
+        if (nextId) {
+            where.nextId = nextId;
+        }
+
+        if (isStartPoint) {
+            where.isStartPoint = parseInt(isStartPoint) === 1;
+        }
+
+        // if (parentId) { 
+        //     const blockIds = []
+
+        //     // get block ids from block that nextId = parentID
+        //     const parentBlock = await Block.findAll({ where: { nextId: parentId } });
+        //     if (parentBlock.length) {
+        //         for (let i = 0; i < parentBlock.length; i++) {
+        //             const block = parentBlock[i];
+        //             blockIds.push(block.id);
+        //         }
+        //     }
+
+        //     // get block ids from block that its blockOption has blockId = parentId
+        //     const blockOptions = await BlockOption.findAll({ where: { blockId: parentId } });
+        //     if (blockOptions.length) {
+        //         for (let i = 0; i < blockOptions.length; i++) {
+        //             const blockOption = blockOptions[i];
+        //             if (blockOption.nextId) {
+        //                 blockIds.push(blockOption.nextId);
+        //             }
+        //         }
+        //     }
+
+        //     console.log(blockIds);
+
+        //     where.id = blockIds;
+        // }
+
+        if (parentId) {
+            const blockIds = await getBlockIds(parentId);
+            // console.log(blockIds);
+            where.id = blockIds;
+        }
+
+        // console.log(where);
+
+        const blocks = await Block.findAndCountAll({
+            where,
+            include: [{ model: BlockOption, as: 'options' }],
+            limit: limit ? parseInt(limit) : 10,
+            offset: page ? (page - 1) * limit : 0
+        });
+
+        let resultData = {
+            pagination: {
+                total: blocks.count,
+                totalFiltered: blocks.rows.length,
+                limit: limit ? parseInt(limit) : 10,
+                page: page ? parseInt(page) : 1
+            },
+            data: blocks.rows
+        }
+
+        res.json(resultData);
     } catch (err) {
+        console.log(err);
         res.status(500).json({ error: err.message });
     }
 });
+
+async function getBlockIds(parentId) {
+    let blockIds = [];
+
+    const parentBlocks = await Block.findAll({ where: { nextId: parentId } });
+    for (let block of parentBlocks) {
+        blockIds.push(block.id);
+    }
+
+    const blockOptions = await BlockOption.findAll({ where: { blockId: parentId } });
+    for (let blockOption of blockOptions) {
+        if (blockOption.nextId) {
+            blockIds.push(blockOption.nextId);
+        }
+    }
+
+    for (let i = 0; i < blockIds.length; i++) {
+        const childBlockIds = await getBlockIds(blockIds[i]);
+        blockIds = blockIds.concat(childBlockIds);
+    }
+
+    return blockIds;
+}
 
 app.get('/block/:id', async (req, res) => {
     const { id } = req.params;
@@ -208,12 +305,12 @@ app.post('/block', async (req, res) => {
             options = JSON.parse(options);
         } catch (error) {
             res.status(400).json({ error: 'options must be a valid JSON' });
-            return;            
+            return;
         }
     }
 
     // start transaction
-    
+
     const transaction = await sequelize.transaction();
     try {
         const block = await Block.create({ type, text, nextId, input, isStartPoint, matchRules }, { transaction });
@@ -239,10 +336,12 @@ app.post('/block', async (req, res) => {
         // commit transaction
         await transaction.commit();
 
-        res.json({ data: {
-            ...block.dataValues,
-            options
-        } });
+        res.json({
+            data: {
+                ...block.dataValues,
+                options
+            }
+        });
     } catch (err) {
 
         // rollback transaction
@@ -288,7 +387,7 @@ app.put('/block/:id', async (req, res) => {
             newOptions = JSON.parse(options);
         } catch (error) {
             res.status(400).json({ error: 'options must be a valid JSON' });
-            return;            
+            return;
         }
     }
 
