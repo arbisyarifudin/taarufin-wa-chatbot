@@ -36,7 +36,8 @@ try {
             unique: true
         },
         value: {
-            type: DataTypes.STRING,
+            // type: DataTypes.STRING,
+            type: DataTypes.TEXT,
             allowNull: false
         }
     });
@@ -47,7 +48,8 @@ try {
             allowNull: false
         },
         text: {
-            type: DataTypes.STRING,
+            // type: DataTypes.STRING,
+            type: DataTypes.TEXT,
             allowNull: false
         },
         input: {
@@ -86,7 +88,8 @@ try {
 
     BlockOption = sequelize.define('BlockOption', {
         text: {
-            type: DataTypes.STRING,
+            // type: DataTypes.STRING,
+            type: DataTypes.TEXT,
             allowNull: false
         },
         nextId: {
@@ -145,7 +148,8 @@ try {
             allowNull: false
         },
         value: {
-            type: DataTypes.STRING,
+            // type: DataTypes.STRING,
+            type: DataTypes.TEXT,
             allowNull: false
         }
     });
