@@ -44,7 +44,7 @@ const blocks = [
     type: 'buttons',
     text: `Wa 'alaikumussalam warahmatullahi wabarakatuh.
 
-    Perkenalkan, saya adalah robot chat ramah bernama *{businessBotName}.*
+    Perkenalkan, saya adalah chatbot bernama *{businessBotName}.*
     
     Saya akan membantu proses pendaftaran {businessName} anda sambil menunggu Admin merespon pesan secara langsung.
     
@@ -163,7 +163,7 @@ const blocks = [
     type: 'question',
     text: `Dijawab oleh *{businessBotName}*
     
-    Berapa tanggal lahir kamu? (contoh: 25-01-1990)xxx`,
+    Berapa tanggal lahir kamu? (contoh: 25-01-1990)`,
     input: 'dob',
     next: 6,
     matchRules: [
