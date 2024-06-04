@@ -102,7 +102,6 @@ const validateMessage = async (message, block) => {
 
             if (rule.type === 'validDate') {
                 const pattern = rule.pattern || 'DD-MM-YYYY';
-                const moment = require('moment');
                 const date = moment(messageBody, pattern, true);
                 if (!date.isValid()) {
                     await message.reply(`Silakan masukkan tanggal yang valid dengan format ${pattern}.`);
@@ -248,13 +247,16 @@ const handleUserMessage = async (message, user) => {
 
         // update userData 'age' if 'dob' is updated
         if (inputKey === 'dob') {
-            const dob = new Date(message.body);
-            const age = new Date().getFullYear() - dob.getFullYear();
+            // const dob = new Date(message.body);
+            const dob = message.body;
+            const date = moment(dob, 'DD-MM-YYYY', true)
+            const age = new Date().getFullYear() - date.year();
+            console.log('age:', age);
             let ageUserData = await UserData.findOne({ where: { userId: user.id, key: 'age' } });
             if (!ageUserData) {
                 ageUserData = await UserData.create({ userId: user.id, key: 'age', value: age > 0 ? age : 0});
             } else {
-                ageUserData.value = age;
+                ageUserData.value = age > 0 ? age : 0;
                 await ageUserData.save();
             }
         }
