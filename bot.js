@@ -106,6 +106,13 @@ const validateMessage = async (message, block) => {
                     await message.reply(`Silakan masukkan tanggal yang valid dengan format ${pattern}.`);
                     return;
                 }
+
+                // tidak boleh kurang dari 18 tahun
+                const age = new Date().getFullYear() - date.year();
+                if (age < 18) {
+                    await message.reply(`Maaf, usia kamu harus minimal 18 tahun.`);
+                    return;
+                }
             }
 
             if (rule.type === 'inArray') {
@@ -205,14 +212,14 @@ const handleUserMessage = async (message, user) => {
 
         if (option) {
             const nextBlock = await Block.findByPk(option.nextId);
-            if (!nextBlock) {
+            if (!nextBlock || !option.nextId) {
                 await resetUserState(user)
                 return
             }
             // user.lastBlockId = nextBlock.id;
             // user.lastBlockAt = new Date();
             // await user.save();
-            await sendBlockMessage(message, nextBlock, user);
+            await sendBlockMessage(message, nextBlock, user, option);
         } else {
             if (options.length > 1) {
                 // await message.reply('Balasan tidak valid. Silakan pilih dari opsi yang tersedia.');
@@ -249,7 +256,7 @@ const handleUserMessage = async (message, user) => {
         }
 
         const nextBlock = await Block.findByPk(currentBlock.nextId);
-        if (!nextBlock) {
+        if (!nextBlock || !currentBlock.nextId) {
             await resetUserState(user)
             return
         }
@@ -258,29 +265,18 @@ const handleUserMessage = async (message, user) => {
         // await user.save();
         await sendBlockMessage(message, nextBlock, user);
     } else if (currentBlock.type === 'message') {
-        await message.reply(currentBlock.text);
-        if (currentBlock.nextId) {
-            const nextBlock = await Block.findByPk(currentBlock.nextId);
-            if (!nextBlock) {
-                await resetUserState(user)
-                return
-            }
-            // user.lastBlockId = nextBlock.id;
-            // user.lastBlockAt = new Date();
-            // await user.save();
-            await sendBlockMessage(message, nextBlock, user);
-        } else {
-            // // reset user state
-            // user.lastBlockId = null;
-            // user.lastBlockAt = new Date();
-            // await user.save();
+        // await message.reply(currentBlock.text);
+        const nextBlock = await Block.findByPk(currentBlock.nextId);
+        if (!nextBlock || !currentBlock.nextId) {
             await resetUserState(user)
-
+            return
         }
+
+        await sendBlockMessage(message, nextBlock, user);
     }
 };
 
-const sendBlockMessage = async (message, block, user) => {
+const sendBlockMessage = async (message, block, user, option = null) => {
 
     // validate request
     if (!block || !message || !user) {
@@ -302,7 +298,7 @@ const sendBlockMessage = async (message, block, user) => {
         const regex = new RegExp(`{${data.key}}`, 'g');
         replyMessage = replyMessage.replace(regex, `*${data.value}*`);
     });
-
+    
     if (block.type === 'buttons') {
         const options = await BlockOption.findAll({ where: { blockId: block.id } });
         if (options.length > 1) {
@@ -341,10 +337,19 @@ const sendBlockMessage = async (message, block, user) => {
     //     await user.save();
     // }
 
-    // save user state
+    
     user.lastBlockId = block.id;
     user.lastBlockAt = new Date();
     await user.save();
+
+    // save user state
+    if (block.type !== 'buttons' && !block.nextId) {
+        await resetUserState(user)
+        return
+    } else if (block.type === 'buttons' && !option?.nextId) {
+        await resetUserState(user)
+        return
+    }
 };
 
 const resetUserState = async (user) => {
