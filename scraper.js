@@ -125,7 +125,7 @@ async function waitForTimeout(timeout = null) {
 // Fungsi utama untuk mengelola proses
 async function main() {
     const browser = await puppeteer.launch({
-        headless: false,
+        headless: true,
         args: [
             '--no-sandbox',
             '--disable-setuid-sandbox',
