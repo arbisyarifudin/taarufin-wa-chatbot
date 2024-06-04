@@ -445,6 +445,79 @@ app.delete('/block/:id', async (req, res) => {
     }
 })
 
+app.get('/block-option', async (req, res) => {
+    const { blockId } = req.query;
+    try {
+        const where = {};
+        if (blockId) {
+            where.blockId = blockId;
+        }
+        const blockOptions = await BlockOption.findAndCountAll({ 
+            where,
+            include: [{ model: Block, as: 'block' }]
+         });
+
+        const resultData = {
+            pagination: {
+                total: blockOptions.count,
+                totalFiltered: blockOptions.rows.length
+            },
+            data: blockOptions.rows
+        }
+
+        res.json(resultData);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+})
+
+app.put('/block-option/:id', async (req, res) => {
+    const { id } = req.params;
+
+    if (!req.body.text) {
+        res.status(400).json({ error: 'Missing required fields' });
+        return;
+    }
+
+    // find block option
+    const blockOption = await BlockOption.findByPk(id);
+    if (!blockOption) {
+        res.status(404).json({ error: 'Block Option not found' });
+        return;
+    }
+
+    // replace empty field with old data
+    const oldDatas = blockOption.dataValues;
+
+    for (const key in oldDatas) {
+        if (Object.hasOwnProperty.call(oldDatas, key)) {
+            const oldData = oldDatas[key];
+
+            if (!req.body[key]) {
+                req.body[key] = oldData;
+            }
+        }
+    }
+
+    let { text, nextId } = req.body;
+
+    nextId = nextId || null;
+
+    const transaction = await sequelize.transaction();
+    try {
+        await BlockOption.update({ text, nextId }, { where: { id }, transaction });
+
+        await transaction.commit();
+
+        const updatedBlockOption = await BlockOption.findByPk(id);
+
+        res.json({ data: updatedBlockOption });
+    } catch (err) {
+        await transaction.rollback();
+        res.status(500).json({ error: err.message });
+    }
+})
+
 sequelize.sync().then(() => {
     app.listen(port, () => {
         console.log(`API server running at http://localhost:${port}`);

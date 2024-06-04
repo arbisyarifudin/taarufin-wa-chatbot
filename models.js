@@ -71,6 +71,14 @@ const BlockOption = sequelize.define('BlockOption', {
             model: 'Blocks',
             key: 'id'
         }
+    },
+    blockId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+            model: 'Blocks',
+            key: 'id'
+        }
     }
 });
 
@@ -120,6 +128,7 @@ const UserData = sequelize.define('UserData', {
 Block.hasMany(BlockImage, { as: 'images', foreignKey: 'blockId' });
 Block.hasMany(BlockOption, { as: 'options', foreignKey: 'blockId' });
 BlockOption.belongsTo(Block, { as: 'nextBlock', foreignKey: 'nextId' });
+BlockOption.belongsTo(Block, { as: 'block', foreignKey: 'blockId' });
 Block.belongsTo(Block, { as: 'nextBlock', foreignKey: 'nextId' });
 
 User.hasMany(UserData, { as: 'data', foreignKey: 'userId' });
