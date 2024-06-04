@@ -155,7 +155,7 @@ app.delete('/user/:id', async (req, res) => {
     }
 })
 
-app.get('/blocks', async (req, res) => {
+app.get('/block', async (req, res) => {
     try {
         const blocks = await Block.findAll({ include: [{ model: BlockOption, as: 'options' }] });
         res.json({ data: blocks });
@@ -164,36 +164,173 @@ app.get('/blocks', async (req, res) => {
     }
 });
 
-app.post('/blocks', async (req, res) => {
-    const { type, text, nextId } = req.body;
-    try {
-        const block = await Block.create({ type, text, nextId });
-        res.json({ data: block });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.get('/blocks/:id', async (req, res) => {
+app.get('/block/:id', async (req, res) => {
     const { id } = req.params;
     try {
         const block = await Block.findByPk(id, { include: [{ model: BlockOption, as: 'options' }] });
+        if (!block) {
+            res.status(404).json({ error: 'Block not found' });
+            return;
+        }
+
         res.json({ data: block });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
-});
+})
 
-app.put('/blocks/:id', async (req, res) => {
-    const { id } = req.params;
-    const { type, text, nextId } = req.body;
+app.post('/block', async (req, res) => {
+    let { type, text, nextId, input, isStartPoint, matchRules, options } = req.body;
+
+    if (!type || !text) {
+        res.status(400).json({ error: 'Missing required fields' });
+        return;
+    }
+    // console.log(req.body);
+
+    nextId = nextId || null
+    if (options) {
+        try {
+            options = JSON.parse(options);
+        } catch (error) {
+            res.status(400).json({ error: 'options must be a valid JSON' });
+            return;            
+        }
+    }
+
+    // start transaction
+    
+    const transaction = await sequelize.transaction();
     try {
-        const [updated] = await Block.update({ type, text, nextId }, { where: { id } });
-        res.json({ updated });
+        const block = await Block.create({ type, text, nextId, input, isStartPoint, matchRules }, { transaction });
+
+        if (options.length) {
+            for (let i = 0; i < options.length; i++) {
+                const option = options[i];
+                option.blockId = block.id;
+
+                // check option.nextId
+                if (option.nextId) {
+                    const nextBlock = await Block.findByPk(option.nextId);
+                    if (!nextBlock) {
+                        await transaction.rollback();
+                        return res.status(400).json({ error: 'option.nextId must be a valid Block ID' });
+                    }
+                }
+
+                await BlockOption.create(option, { transaction });
+            }
+        }
+
+        // commit transaction
+        await transaction.commit();
+
+        res.json({ data: {
+            ...block.dataValues,
+            options
+        } });
+    } catch (err) {
+
+        // rollback transaction
+        await transaction.rollback();
+
+        res.status(500).json({ error: err.message });
+    }
+})
+
+app.put('/block/:id', async (req, res) => {
+    const { id } = req.params;
+
+    if (!req.body.type || !req.body.text) {
+        res.status(400).json({ error: 'Missing required fields' });
+        return;
+    }
+
+    // find block
+    const block = await Block.findByPk(id);
+    if (!block) {
+        res.status(404).json({ error: 'Block not found' });
+        return;
+    }
+
+    // replace empty field with old data
+    const oldDatas = block.dataValues;
+
+    for (const key in oldDatas) {
+        if (Object.hasOwnProperty.call(oldDatas, key)) {
+            const oldData = oldDatas[key];
+
+            if (!req.body[key]) {
+                req.body[key] = oldData;
+            }
+        }
+    }
+
+    let { type, text, nextId, input, isStartPoint, matchRules, options } = req.body;
+
+    let newOptions = [];
+    if (options) {
+        try {
+            newOptions = JSON.parse(options);
+        } catch (error) {
+            res.status(400).json({ error: 'options must be a valid JSON' });
+            return;            
+        }
+    }
+
+    const transaction = await sequelize.transaction();
+    try {
+        await Block.update({ type, text, nextId, input, isStartPoint, matchRules }, { where: { id }, transaction });
+
+        if (newOptions.length) {
+            // drop old options
+            await BlockOption.destroy({ where: { blockId: id }, transaction });
+
+            for (let i = 0; i < newOptions.length; i++) {
+                const option = newOptions[i];
+                option.blockId = block.id;
+
+                // check option.nextId
+                if (option.nextId) {
+                    const nextBlock = await Block.findByPk(option.nextId);
+                    if (!nextBlock) {
+                        await transaction.rollback();
+                        return res.status(400).json({ error: 'option.nextId must be a valid Block ID' });
+                    }
+                }
+
+                await BlockOption.create(option, { transaction });
+            }
+        }
+
+        await transaction.commit();
+
+        const updatedBlock = await Block.findByPk(id, { include: [{ model: BlockOption, as: 'options' }] });
+
+        res.json({ data: updatedBlock });
+    } catch (err) {
+        await transaction.rollback();
+        res.status(500).json({ error: err.message, stack: err.stack });
+    }
+})
+
+app.delete('/block/:id', async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const block = await Block.findByPk(id);
+        if (!block) {
+            res.status(404).json({ error: 'Block not found' });
+            return;
+        }
+
+        await block.destroy();
+
+        res.json({ message: 'Block deleted' });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
-});
+})
 
 sequelize.sync().then(() => {
     app.listen(port, () => {
