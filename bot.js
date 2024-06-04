@@ -52,6 +52,8 @@ client.on('ready', () => {
 
 client.on('message', async (message) => {
     // console.log('Message received:', message);
+    if (message.fromMe) return;
+
     console.log('Message received:', message.body, 'from:', message.from, 'isGroup:', message.isGroupMsg, 'hasMedia:', message.hasMedia, 'isStatus:', message.from.includes('status@broadcast'));
     if (!message.from.includes('@c.us') || !message.body || message.body.trim().length === 0 || message.from.includes('status@broadcast') || message.hasMedia) {
         return;
