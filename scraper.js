@@ -9,6 +9,9 @@ const USERNAME = 'taarufin.official';
 const PASSWORD = 'Taarufin@2024.2';
 const CAPTIONS_FILE = 'storages/scraper_captions';
 const POST_IDS_FILE = 'storages/scraper_ids.json';
+const COOKIES_FILE = 'storages/scraper_cookies.json';
+
+const userAgent = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/64.0.3282.39 Safari/537.36';
 
 // Fungsi untuk login ke Instagram
 async function loginInstagram(page, username, password) {
@@ -17,24 +20,51 @@ async function loginInstagram(page, username, password) {
     // await page.type('input[name="username"]', username);
     // await page.type('input[name="password"]', password);
 
-    await page.waitForSelector('input[aria-label="Phone number, username or email address"]');
-    await page.type('input[aria-label="Phone number, username or email address"]', username);
-    await page.type('input[aria-label="Password"]', password);
-    await page.click('button[type="submit"]');
+    try {
+        await page.waitForSelector('input[aria-label="Phone number, username or email address"]', { timeout: 5000 });
 
-    // check if login has error message in 'form#loginForm > div + span > div' element textContent
-    await page.waitForTimeout(2000);
+        await page.type('input[aria-label="Phone number, username or email address"]', username, { delay: Math.floor(Math.random() * 150) + 100 });
+        await page.type('input[aria-label="Password"]', password, { delay: Math.floor(Math.random() * 150) + 100 });
+        await page.click('button[type="submit"]');
 
-    const errorMessage = await page.evaluate(() => {
-        const errorElement = document.querySelector('form#loginForm > div + span > div');
-        return errorElement ? errorElement.textContent : null;
-    });
+        // check if login has error message in 'form#loginForm > div + span > div' element textContent
+        await waitForTimeout();
 
-    if (errorMessage) {
-        console.error('Login failed:', errorMessage);
-        return false;
+        const errorMessage = await page.evaluate(() => {
+            const errorElement = document.querySelector('form#loginForm > div + span > div');
+            return errorElement ? errorElement.textContent : null;
+        });
+
+        if (errorMessage) {
+            console.error('Login failed:', errorMessage);
+            return false;
+        }
+    } catch (error) {
+        if (error instanceof puppeteer.errors.TimeoutError) {
+            console.error(error);
+
+            // check apakah kita dibawah ke halaman /challenge
+            const pathname = await page.evaluate(() => window.location.pathname);
+            console.log('window.location.pathname:', pathname);
+
+            const isChallenged = pathname === '/challenge' || pathname === '/challenge/';
+
+            console.log('isChallenged:', isChallenged);
+
+            if (isChallenged) {
+                console.log('Challenge page detected!');
+                // await waitForTimeout(5000);
+                // click 'Dismiss' button in div[data-bloks-name="bk.components.Flexbox"][role="button"]
+                await page.click('div[data-bloks-name="bk.components.Flexbox"][role="button"]');
+                await waitForTimeout();
+                return true;
+            }
+        } else {
+            console.error(error)
+        }
+
+        return false
     }
-
     return true;
 }
 
@@ -47,7 +77,7 @@ async function getLatestPosts(page, targetUsername) {
         const nodes = Array.from(document.querySelectorAll('a img'));
 
         const fetchTotal = 12; // get X total latest posts
-        return nodes.slice(1, fetchTotal+1).map(node => {
+        return nodes.slice(1, fetchTotal + 1).map(node => {
             const parent = node.closest('a');
             const hrefArray = parent.href.split('/');
             if (!hrefArray.length) {
@@ -69,8 +99,8 @@ async function isUserLoggedIn(page) {
 
     // get cookies
     console.log('Checking cookies...');
-    if (fs.existsSync('scraper_cookies.json')) {
-        const cookies = fs.readFileSync('scraper_cookies.json', 'utf-8');
+    if (fs.existsSync(COOKIES_FILE)) {
+        const cookies = fs.readFileSync(COOKIES_FILE, 'utf-8');
         const cookiesArr = JSON.parse(cookies);
         console.log('Setting cookies...');
         await page.setCookie(...cookiesArr);
@@ -86,9 +116,15 @@ async function isUserLoggedIn(page) {
     }
 }
 
+async function waitForTimeout(timeout = null) {
+    const randomTime = timeout || Math.floor(Math.random() * (10000 - 5000 + 1)) + 5000;
+    console.log('Waiting for', randomTime, 'ms...');
+    return await new Promise(resolve => setTimeout(resolve, randomTime));
+}
+
 // Fungsi utama untuk mengelola proses
 async function main() {
-    const browser = await puppeteer.launch({ 
+    const browser = await puppeteer.launch({
         headless: false,
         args: [
             '--no-sandbox',
@@ -101,8 +137,18 @@ async function main() {
             '--disable-gpu'
         ],
         userDataDir: path.join(__dirname, '.puppeteer/scraper_data')
-     });
+    });
     const page = await browser.newPage();
+
+    // Set the user agent and disable the webdriver flag
+    await page.setUserAgent(userAgent);
+    await page.evaluateOnNewDocument(() => {
+        // Object.defineProperty(navigator, 'webdriver', {
+        //     get: () => undefined
+        // });
+        delete navigator.__proto__.webdriver;
+    }
+    );
 
     try {
 
@@ -117,7 +163,7 @@ async function main() {
 
             console.log('Go to Instagram home page...');
             await page.waitForNavigation({ waitUntil: 'networkidle2' });
-    
+
             // Wait for user to login
             await page.waitForSelector('svg[aria-label="Settings"]', { timeout: 0 });
             console.log('Login success!');
@@ -125,7 +171,7 @@ async function main() {
             // Save cookies
             const cookies = await page.cookies();
             console.log('Saving cookies...');
-            fs.writeFileSync('scraper_cookies.json', JSON.stringify(cookies, null, 2));
+            fs.writeFileSync(COOKIES_FILE, JSON.stringify(cookies, null, 2));
         }
 
         console.log('Getting latest posts...');
@@ -139,10 +185,11 @@ async function main() {
                 savedPostIds = JSON.parse(fs.readFileSync(POST_IDS_FILE, 'utf-8'));
             } catch (error) {
                 // savedPostIds = [];                
-                savedPostIds = {};                
+                savedPostIds = {};
             }
         }
 
+        await waitForTimeout();
         const posts = await getLatestPosts(page, TARGET_USERNAME);
         // console.log('Posts:', posts);
 
@@ -154,7 +201,7 @@ async function main() {
             if (!savedPostIds[currentDateStr]) {
                 savedPostIds[currentDateStr] = [];
             }
-            
+
             // check in all dates
             let isAlreadySaved = false;
             for (const date in savedPostIds) {
@@ -163,7 +210,7 @@ async function main() {
                     break;
                 }
             }
-            
+
             // if (!savedPostIzds[currentDateStr].includes(post.postId)) {
             if (!isAlreadySaved) {
                 // Skip caption yang tidak ada kata-kata "Nama:" atau "Nama :" atau "Jns kelamin:" atau "Jns kelamin :"
